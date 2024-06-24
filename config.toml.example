@@ -1,0 +1,12 @@
+state_file_path="nodes.state"
+iso_path="/home/ubuntu/constellation/myos.iso"
+ipmi_tool_jar_path="/home/ubuntu/constellation/smcipmitool/SMCIPMITool.jar"
+listen_address="IP:5743"
+
+[[nodes]]
+id="1"
+ipmi_ip=""
+node_ip=""
+hostname="first-node"
+ipmi_creds.username="ADMIN"
+ipmi_creds.password="admin"
