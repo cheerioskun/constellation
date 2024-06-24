@@ -34,10 +34,12 @@ func (p *Provisioner) Provision(node *models.Node) error {
 	}
 	defer ipmiClient.Disconnect()
 
+	log.Printf("IPMI Shell Connected! Mounting ISO on node %s: %s", node.ID, node.Hostname)
 	if err := ipmiClient.MountISO(p.isoPath); err != nil {
 		return fmt.Errorf("failed to mount ISO: %v", err)
 	}
 
+	log.Printf("ISO Mounted! Power cycling node %s: %s", node.ID, node.Hostname)
 	if err := ipmiClient.PowerCycle(); err != nil {
 		return fmt.Errorf("failed to power cycle node: %v", err)
 	}
@@ -45,11 +47,13 @@ func (p *Provisioner) Provision(node *models.Node) error {
 	// Wait for the node to ping back
 	for i := 0; i < 30; i++ {
 		time.Sleep(1 * time.Minute)
-		updatedNode, _ := p.store.GetNode(node.ID)
-		if updatedNode.Status == models.StatusInitialized {
-			log.Printf("Node %s successfully provisioned", node.ID)
-			return nil
-		}
+		log.Printf("Checking if node %s is reachable", node.ID)
+		// We can't do this till we implement the correct phone_home mechanism
+		// updatedNode, _ := p.store.GetNode(node.ID)
+		// if updatedNode.Status == models.StatusInitialized {
+		// 	log.Printf("Node %s successfully provisioned", node.ID)
+		// 	return nil
+		// }
 	}
 
 	node.Status = models.StatusUnhealthy

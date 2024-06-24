@@ -36,6 +36,18 @@ func (s *Store) Load() error {
 	return json.Unmarshal(data, &s.nodes)
 }
 
+func (s *Store) LoadNodes(nodes []models.Node) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	for _, node := range nodes {
+		if s.nodes[node.ID] != nil {
+			continue
+		}
+		s.nodes[node.ID] = &node
+	}
+}
+
 func (s *Store) Save() error {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
