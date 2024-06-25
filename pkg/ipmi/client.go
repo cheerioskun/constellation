@@ -29,6 +29,7 @@ func NewClient() *Client {
 func (c *Client) Connect(ipAddress, username, password string) error {
 	log.Printf("Connecting to %s with username %s", ipAddress, username)
 	var err error
+
 	libPath := path.Dir(SmcIPMIToolJarPath)
 	cmd := fmt.Sprintf("java -Djava.library.path=%s -jar %s %s %s %s shell",
 		libPath,
@@ -37,37 +38,50 @@ func (c *Client) Connect(ipAddress, username, password string) error {
 		username,
 		password,
 	)
-	c.session, _, err = expect.Spawn(cmd, 30*time.Minute)
+	log.Printf("Running command: %s", cmd)
+	c.session, _, err = expect.Spawn(cmd,
+		30*time.Minute,
+		expect.Verbose(true),
+		expect.CheckDuration(1*time.Second),
+	)
 	if err != nil {
 		return err
 	}
 	// Wait for actual connection to be established
-	_, _, err = c.session.Expect(regexp.MustCompile(ipAddress), 10*time.Second)
+	var out string
+	out, _, err = c.session.Expect(regexp.MustCompile("ASPD_T>"), 10*time.Second)
+	log.Println(out)
 	return err
 }
 
 func (c *Client) Disconnect() {
+	c.session.Send("exit\n")
 	c.session.Close()
 }
 
 func (c *Client) MountISO(isoPath string) error {
-	log.Printf("Waiting for prompt to mount ISO...")
-	_, _, err := c.session.Expect(regexp.MustCompile("SIM(WA)"), 5*time.Second)
+
+	mountCmd := fmt.Sprintf("vmwa dev2iso %s\n", isoPath)
+	err := c.session.Send(mountCmd)
 	if err != nil {
 		return err
 	}
-	mountCmd := fmt.Sprintf("vmwa dev2iso %s", isoPath)
-	err = c.session.Send(mountCmd)
+	// Wait for the iso to be mounted: Plug-In OK!! message
+	var out string
+	out, _, err = c.session.Expect(regexp.MustCompile("OK"), 30*time.Second)
+	log.Println(out)
 	return err
 }
 
 func (c *Client) PowerCycle() error {
-	log.Printf("Waiting for prompt to power cycle...")
-	_, _, err := c.session.Expect(regexp.MustCompile("SIM(WA)"), 5*time.Second)
+	powerCycleCmd := "ipmi power reset\n"
+	err := c.session.Send(powerCycleCmd)
 	if err != nil {
 		return err
 	}
-	powerCycleCmd := "ipmi power reset"
-	err = c.session.Send(powerCycleCmd)
+	// Wait for the power to be reset: Done message
+	var out string
+	out, _, err = c.session.Expect(regexp.MustCompile("Done"), 10*time.Second)
+	log.Println(out)
 	return err
 }

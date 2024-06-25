@@ -30,18 +30,22 @@ func (p *Provisioner) Provision(node *models.Node) error {
 	log.Printf("Creating ipmi client to spawn shell")
 	ipmiClient := ipmi.NewClient()
 	if err := ipmiClient.Connect(node.IPMIIP, node.IPMICreds.Username, node.IPMICreds.Password); err != nil {
-		return fmt.Errorf("failed to connect to IPMI: %v", err)
+		err = fmt.Errorf("failed to connect to IPMI: %v", err)
+		return err
 	}
 	defer ipmiClient.Disconnect()
 
 	log.Printf("IPMI Shell Connected! Mounting ISO on node %s: %s", node.ID, node.Hostname)
 	if err := ipmiClient.MountISO(p.isoPath); err != nil {
-		return fmt.Errorf("failed to mount ISO: %v", err)
+		err = fmt.Errorf("failed to mount ISO: %v", err)
+		log.Printf("%v", err)
+		return err
 	}
 
 	log.Printf("ISO Mounted! Power cycling node %s: %s", node.ID, node.Hostname)
 	if err := ipmiClient.PowerCycle(); err != nil {
-		return fmt.Errorf("failed to power cycle node: %v", err)
+		err = fmt.Errorf("failed to power cycle node: %v", err)
+		return err
 	}
 
 	// Wait for the node to ping back
