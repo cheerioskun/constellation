@@ -55,7 +55,7 @@ func (s *Store) Save() error {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	data, err := json.Marshal(s.nodes)
+	data, err := json.MarshalIndent(s.nodes, "", "    ")
 	if err != nil {
 		return err
 	}

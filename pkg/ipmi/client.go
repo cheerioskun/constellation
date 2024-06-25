@@ -75,13 +75,24 @@ func (c *Client) MountISO(isoPath string) error {
 }
 
 func (c *Client) PowerCycle() error {
+	var out string
+	bootOptionCmd := "ipmi power bootoption 3\n"
 	powerCycleCmd := "ipmi power reset\n"
-	err := c.session.Send(powerCycleCmd)
+	err := c.session.Send(bootOptionCmd)
+	if err != nil {
+		return err
+	}
+	// Wait for the bootoption to be set: Done message
+	out, _, err = c.session.Expect(regexp.MustCompile("Set boot device done"), 10*time.Second)
+	log.Println(out)
+	if err != nil {
+		return err
+	}
+	err = c.session.Send(powerCycleCmd)
 	if err != nil {
 		return err
 	}
 	// Wait for the power to be reset: Done message
-	var out string
 	out, _, err = c.session.Expect(regexp.MustCompile("Done"), 10*time.Second)
 	log.Println(out)
 	return err
