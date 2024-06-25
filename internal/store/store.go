@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"sync"
 
@@ -36,15 +37,17 @@ func (s *Store) Load() error {
 	return json.Unmarshal(data, &s.nodes)
 }
 
-func (s *Store) LoadNodes(nodes []models.Node) {
+func (s *Store) LoadNodes(nodes map[string]models.Node) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	for _, node := range nodes {
-		if s.nodes[node.ID] != nil {
+	for _, _node := range nodes {
+		if s.nodes[_node.Hostname] != nil {
 			continue
 		}
-		s.nodes[node.ID] = &node
+		log.Printf("Loading node: %s\n", _node.Hostname)
+		node := _node
+		s.nodes[node.Hostname] = &node
 	}
 }
 
@@ -60,11 +63,11 @@ func (s *Store) Save() error {
 	return os.WriteFile(s.stateFile, data, 0644)
 }
 
-func (s *Store) GetNode(id string) (*models.Node, bool) {
+func (s *Store) GetNode(name string) (*models.Node, bool) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	node, ok := s.nodes[id]
+	node, ok := s.nodes[name]
 	return node, ok
 }
 
@@ -84,7 +87,7 @@ func (s *Store) UpdateNode(node *models.Node) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.nodes[node.ID] = node
+	s.nodes[node.Hostname] = node
 }
 
 func (s *Store) GetAllNodes() []*models.Node {
@@ -102,22 +105,26 @@ func (s *Store) GetUninitializedNodes() []*models.Node {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	var nodes []*models.Node
-	for _, node := range s.nodes {
-		if node.Status == models.StatusUninitialized {
-			nodes = append(nodes, node)
-		}
-	}
-	return nodes
+	return s.getNodesByStatus(models.StatusUninitialized)
 }
 
 func (s *Store) GetInitializedNodes() []*models.Node {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
+	return s.getNodesByStatus(models.StatusInitialized)
+}
+
+func (s *Store) GetNodesByStatus(status models.NodeStatus) []*models.Node {
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
+	return s.getNodesByStatus(status)
+}
+
+func (s *Store) getNodesByStatus(status models.NodeStatus) []*models.Node {
 	var nodes []*models.Node
 	for _, node := range s.nodes {
-		if node.Status == models.StatusInitialized {
+		if node.Status == status {
 			nodes = append(nodes, node)
 		}
 	}

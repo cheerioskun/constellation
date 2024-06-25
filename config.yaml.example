@@ -1,0 +1,12 @@
+state_file_path: "nodes.state"
+iso_path: /home/ubuntu/constellation/myos.iso
+ipmi_tool_jar_path: /home/ubuntu/constellation/smcipmitool/SMCIPMITool.jar
+listen_address: "IP:5743"
+nodes:
+  MyMachine-1:
+    ipmi_ip: IPMI_IP
+    node_ip: STATIC_IP
+    hostname: MyMachine-1
+    ipmi_creds:
+      username: ADMIN
+      password: admin

@@ -2,22 +2,29 @@ package config
 
 import (
 	"constellation/internal/models"
+	"os"
 
-	"github.com/BurntSushi/toml"
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	StateFilePath   string        `toml:"state_file_path"`
-	ISOPath         string        `toml:"iso_path"`
-	IPMIToolJarPath string        `toml:"ipmi_tool_jar_path"`
-	ListenAddress   string        `toml:"listen_address"`
-	Nodes           []models.Node `toml:"nodes"`
+	StateFilePath   string                 `yaml:"state_file_path"`
+	ISOPath         string                 `yaml:"iso_path"`
+	IPMIToolJarPath string                 `yaml:"ipmi_tool_jar_path"`
+	ListenAddress   string                 `yaml:"listen_address"`
+	Nodes           map[string]models.Node `yaml:"nodes"`
 }
 
 func Load(filename string) (*Config, error) {
-	var cfg Config
-	if _, err := toml.DecodeFile(filename, &cfg); err != nil {
+	data, err := os.ReadFile(filename)
+	if err != nil {
 		return nil, err
 	}
+
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+
 	return &cfg, nil
 }

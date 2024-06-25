@@ -12,6 +12,7 @@ import (
 
 var (
 	SmcIPMIToolJarPath = "/usr/local/bin/smcipmitool"
+	Verbose            = false
 )
 
 type Client struct {
@@ -41,7 +42,7 @@ func (c *Client) Connect(ipAddress, username, password string) error {
 	log.Printf("Running command: %s", cmd)
 	c.session, _, err = expect.Spawn(cmd,
 		30*time.Minute,
-		expect.Verbose(true),
+		expect.Verbose(Verbose),
 		expect.CheckDuration(1*time.Second),
 	)
 	if err != nil {
@@ -49,7 +50,7 @@ func (c *Client) Connect(ipAddress, username, password string) error {
 	}
 	// Wait for actual connection to be established
 	var out string
-	out, _, err = c.session.Expect(regexp.MustCompile("ASPD_T>"), 10*time.Second)
+	out, _, err = c.session.Expect(regexp.MustCompile(">"), 10*time.Second)
 	log.Println(out)
 	return err
 }

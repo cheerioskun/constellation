@@ -1,22 +1,29 @@
 package main
 
 import (
+	"constellation/internal/api"
+	"constellation/internal/config"
+	"constellation/internal/models"
+	"constellation/internal/monitor"
+	"constellation/internal/provisioner"
+	"constellation/internal/store"
+	"constellation/pkg/ipmi"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"constellation/internal/api"
-	"constellation/internal/config"
-	"constellation/internal/monitor"
-	"constellation/internal/provisioner"
-	"constellation/internal/store"
-	"constellation/pkg/ipmi"
+	"github.com/alitto/pond"
+	"github.com/davecgh/go-spew/spew"
+)
+
+const (
+	Concurrency = 3
 )
 
 func main() {
 
-	cfg, err := config.Load("config.toml")
+	cfg, err := config.Load("config.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
@@ -30,6 +37,7 @@ func main() {
 
 	// Load the initial node configuration from the configuration file
 	store.LoadNodes(cfg.Nodes)
+	log.Println(spew.Sdump(cfg.Nodes))
 	log.Println("Nodes loaded successfully")
 
 	ipmi.SetJarPath(cfg.IPMIToolJarPath)
@@ -50,16 +58,12 @@ func main() {
 	log.Println("API server started successfully")
 
 	// Start provisioning uninitialized nodes
-	for _, node := range store.GetUninitializedNodes() {
-		log.Printf("Provisioning node %s: %s\n", node.ID, node.Hostname)
-		go prov.Provision(node)
-	}
-	log.Println("Provisioning of uninitialized nodes started")
+	go StartAutoProvisioning(store, prov)
 
 	// Start monitoring initialized nodes
 	for _, node := range store.GetInitializedNodes() {
-		log.Printf("Monitoring node %s: %s\n", node.ID, node.Hostname)
-		go mon.Monitor(node.ID)
+		log.Printf("Monitoring node %s\n", node.Hostname)
+		go mon.Monitor(node.Hostname)
 	}
 	log.Println("Monitoring of initialized nodes started")
 
@@ -77,4 +81,20 @@ func main() {
 		log.Fatalf("Failed to save state: %v", err)
 	}
 	log.Println("State saved successfully")
+}
+
+func StartAutoProvisioning(store *store.Store, prov *provisioner.Provisioner) {
+
+	pool := pond.New(Concurrency, Concurrency*10)
+	nodes_to_provision := store.GetUninitializedNodes()
+	in_progress_nodes := store.GetNodesByStatus(models.StatusProvisioning)
+	nodes_to_provision = append(nodes_to_provision, in_progress_nodes...)
+	for _, _node := range nodes_to_provision {
+		node := _node
+		log.Printf("Requesting provisioning for %s\n", node.Hostname)
+		pool.Submit(func() {
+			prov.Provision(node)
+		})
+	}
+	pool.StopAndWait()
 }

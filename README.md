@@ -21,14 +21,14 @@ Constellation provides a suite of tools to streamline the process of harnessing 
 ## Getting Started
 
 - Clone the repository
-- Create a config.toml
-- Configure your nodes in config.toml
+- Create a config.yaml
+- Configure your nodes in config.yaml
 - Build the project
 - Run the Constellation server in bg
 - Use stars cli for interacting
 
 ## Configuration
-Constellation uses a TOML configuration file to manage settings and node information. See config.toml.example for a sample configuration.
+Constellation uses a YAML configuration file to manage settings and node information. See config.yaml.example for a sample configuration.
 ## Usage
 ### CLI
 Use the CLI for quick management tasks:

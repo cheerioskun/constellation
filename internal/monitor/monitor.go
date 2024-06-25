@@ -23,31 +23,32 @@ func (m *Monitor) MonitorAll() {
 	for {
 		nodes := m.store.GetInitializedNodes()
 		for _, node := range nodes {
-			go m.checkNodeHealth(node)
+			go CheckNodeHealth(node, m.store)
 		}
 		time.Sleep(5 * time.Minute)
 	}
 }
 
-func (m *Monitor) Monitor(nodeID string) {
+func (m *Monitor) Monitor(nodeName string) {
 	for {
-		node, ok := m.store.GetNode(nodeID)
+		node, ok := m.store.GetNode(nodeName)
 		if ok {
-			m.checkNodeHealth(node)
+			CheckNodeHealth(node, m.store)
+			m.store.UpdateNode(node)
 		}
 		time.Sleep(5 * time.Minute)
 	}
 }
 
-func (m *Monitor) checkNodeHealth(node *models.Node) {
+func CheckNodeHealth(node *models.Node, store *store.Store) {
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort(node.NodeIP, "22"), 5*time.Second)
 	if err != nil {
-		log.Printf("Node %s is unhealthy: %v", node.ID, err)
+		log.Printf("Node %s is not reachable: %v", node.Hostname, err)
 		node.Status = models.StatusUnhealthy
 	} else {
 		conn.Close()
 		node.Status = models.StatusInitialized
 	}
 	node.LastCheck = time.Now()
-	m.store.UpdateNode(node)
+	store.UpdateNode(node)
 }
